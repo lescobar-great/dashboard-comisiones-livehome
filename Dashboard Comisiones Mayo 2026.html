@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Comisiones — LiveHome SPA</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --katy:   #2E75B6;
+    --pablo:  #70AD47;
+    --jaime:  #FF4B4B;
+    --niko:   #9966CC;
+    --bg:     #0a0e1a;
+    --card:   rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --text:   #e8eaf0;
+    --muted:  #7a7f9a;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Fondo animado ─────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(46,117,182,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(153,102,204,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 50% 50%, rgba(112,173,71,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 40px 32px; }
+
+  /* ── Header ────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.8s ease both;
+  }
+  .header-badge {
+    display: inline-block;
+    background: rgba(46,117,182,0.2);
+    border: 1px solid rgba(46,117,182,0.4);
+    color: #7eb8f7;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-size: clamp(28px, 4vw, 52px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #ffffff 0%, #a8c8ff 50%, #d4a8ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .header p {
+    font-size: 15px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* ── Filtros ────────────────────────────────────────── */
+  .filters {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+  .filter-btn {
+    padding: 9px 22px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(10px);
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.3px;
+  }
+  .filter-btn:hover { color: white; border-color: rgba(255,255,255,0.25); transform: translateY(-1px); }
+  .filter-btn.active { color: white; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .filter-btn[data-f="todos"].active  { background: linear-gradient(135deg,#2E75B6,#9966CC); border-color: transparent; }
+  .filter-btn[data-f="katy"].active   { background: linear-gradient(135deg,#1a5fa0,#2E75B6); border-color: transparent; }
+  .filter-btn[data-f="pablo"].active  { background: linear-gradient(135deg,#3d7a1e,#70AD47); border-color: transparent; }
+  .filter-btn[data-f="jaime"].active  { background: linear-gradient(135deg,#a00000,#FF4B4B); border-color: transparent; }
+  .filter-btn[data-f="niko"].active   { background: linear-gradient(135deg,#5a1e99,#9966CC); border-color: transparent; }
+
+  /* ── KPI Cards ──────────────────────────────────────── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+    backdrop-filter: blur(20px);
+    animation: fadeUp 0.8s ease both;
+  }
+  .kpi-card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,0.2); }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    border-radius: 20px 20px 0 0;
+    transition: height 0.3s ease;
+  }
+  .kpi-card:hover::before { height: 4px; }
+  .kpi-card.katy::before   { background: linear-gradient(90deg, #1a5fa0, #2E75B6, #7eb8f7); }
+  .kpi-card.pablo::before  { background: linear-gradient(90deg, #3d7a1e, #70AD47, #b5e488); }
+  .kpi-card.jaime::before  { background: linear-gradient(90deg, #a00000, #FF4B4B, #ff9999); }
+  .kpi-card.niko::before   { background: linear-gradient(90deg, #5a1e99, #9966CC, #cc99ff); }
+
+  .kpi-card::after {
+    content: '';
+    position: absolute; bottom: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    opacity: 0.06;
+    transition: all 0.4s ease;
+  }
+  .kpi-card:hover::after { opacity: 0.12; transform: scale(1.2); }
+  .kpi-card.katy::after   { background: #2E75B6; }
+  .kpi-card.pablo::after  { background: #70AD47; }
+  .kpi-card.jaime::after  { background: #FF4B4B; }
+  .kpi-card.niko::after   { background: #9966CC; }
+
+  .kpi-card[style*="display: none"] { display: none !important; }
+
+  .kpi-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .kpi-card.katy  .kpi-name { color: #7eb8f7; }
+  .kpi-card.pablo .kpi-name { color: #b5e488; }
+  .kpi-card.jaime .kpi-name { color: #ff9999; }
+  .kpi-card.niko  .kpi-name { color: #cc99ff; }
+
+  .kpi-periodo {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .kpi-row { margin-bottom: 14px; }
+  .kpi-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 500; }
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .kpi-card.katy  .kpi-value { color: #7eb8f7; }
+  .kpi-card.pablo .kpi-value { color: #b5e488; }
+  .kpi-card.jaime .kpi-value { color: #ff9999; }
+  .kpi-card.niko  .kpi-value { color: #cc99ff; }
+
+  .kpi-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 6px;
+  }
+  .kpi-card.katy  .kpi-badge { background: rgba(46,117,182,0.2);  color: #7eb8f7; }
+  .kpi-card.pablo .kpi-badge { background: rgba(112,173,71,0.2);  color: #b5e488; }
+  .kpi-card.jaime .kpi-badge { background: rgba(255,75,75,0.2);   color: #ff9999; }
+  .kpi-card.niko  .kpi-badge { background: rgba(153,102,204,0.2); color: #cc99ff; }
+
+  /* ── Grid inferior ─────────────────────────────────── */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    animation: fadeUp 0.8s 0.3s ease both;
+    transition: border-color 0.3s;
+  }
+  .panel:hover { border-color: rgba(255,255,255,0.15); }
+  .panel-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panel-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+  /* ── Gráfico ───────────────────────────────────────── */
+  .chart-wrap { padding: 20px 24px 24px; }
+  canvas { max-height: 260px; }
+
+  /* ── Tabla comparativa ─────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  thead th:not(:first-child) { text-align: right; }
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.04); }
+  tbody td { padding: 14px 16px; }
+  tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-name { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tfoot-row td {
+    padding: 14px 16px;
+    font-weight: 800;
+    font-size: 14px;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+  }
+  .tfoot-row td:not(:first-child) { text-align: right; }
+
+  /* ── Desglose ───────────────────────────────────────── */
+  .desglose-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .breakdown-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+  }
+  .breakdown-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); }
+  .breakdown-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .breakdown-body { padding: 16px 20px; }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 13px;
+  }
+  .breakdown-row:last-child { border: none; }
+  .breakdown-row-label { color: var(--muted); font-weight: 500; }
+  .breakdown-row-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .breakdown-bar {
+    height: 4px;
+    border-radius: 100px;
+    margin-top: 6px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  .breakdown-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+    width: 0%;
+  }
+  .breakdown-total {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-weight: 800;
+    font-size: 15px;
+  }
+
+  /* ── Footer ─────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 20px 0 10px;
+    animation: fadeUp 0.8s 0.5s ease both;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Animaciones ────────────────────────────────────── */
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)}  to{opacity:1;transform:translateY(0)} }
+
+  .kpi-card:nth-child(1){animation-delay:0.1s}
+  .kpi-card:nth-child(2){animation-delay:0.2s}
+  .kpi-card:nth-child(3){animation-delay:0.3s}
+  .kpi-card:nth-child(4){animation-delay:0.4s}
+
+  /* ── Responsive ─────────────────────────────────────── */
+  @media(max-width:900px){
+    .kpi-grid{grid-template-columns:1fr 1fr}
+    .bottom-grid{grid-template-columns:1fr}
+    .desglose-grid{grid-template-columns:1fr}
+  }
+  @media(max-width:560px){
+    .kpi-grid{grid-template-columns:1fr}
+    .container{padding:24px 16px}
+  }
+</style>
+
+<style>
+  /* ── Login overlay ─────────────────────────────────── */
+  #login-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0a0e1a;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #login-overlay::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(46,117,182,0.2) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(153,102,204,0.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .login-box {
+    position: relative; z-index: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 48px 40px;
+    width: 100%; max-width: 380px;
+    text-align: center;
+    backdrop-filter: blur(20px);
+    animation: fadeDown 0.6s ease both;
+  }
+  .login-badge {
+    display: inline-block;
+    background: rgba(46,117,182,0.2);
+    border: 1px solid rgba(46,117,182,0.4);
+    color: #7eb8f7;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 16px; border-radius: 100px;
+    margin-bottom: 20px;
+  }
+  .login-box h2 {
+    font-size: 26px; font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 0%, #a8c8ff 50%, #d4a8ff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .login-box p { font-size: 13px; color: #7a7f9a; margin-bottom: 32px; }
+  .login-input {
+    width: 100%; padding: 14px 18px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: white; font-size: 15px; font-family: 'Inter', sans-serif;
+    outline: none; margin-bottom: 12px;
+    transition: border-color 0.25s;
+    letter-spacing: 3px;
+  }
+  .login-input:focus { border-color: rgba(46,117,182,0.6); }
+  .login-input::placeholder { letter-spacing: 0; color: #7a7f9a; }
+  .login-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #2E75B6, #9966CC);
+    border: none; border-radius: 12px;
+    color: white; font-size: 14px; font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: all 0.25s;
+    letter-spacing: 0.5px;
+  }
+  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(46,117,182,0.4); }
+  .login-error {
+    color: #ff9999; font-size: 12px; margin-top: 10px;
+    min-height: 18px; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-badge">LiveHome SPA</div>
+    <h2>Dashboard Comisiones</h2>
+    <p>Mayo 2026 · Acceso restringido</p>
+    <input class="login-input" id="pwd-input" type="password"
+           placeholder="Ingresa la contraseña"
+           onkeydown="if(event.key==='Enter') checkPwd()">
+    <button class="login-btn" onclick="checkPwd()">Ingresar →</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div class="container" id="main-content" style="display:none">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">LiveHome SPA</div>
+    <h1>Dashboard Comisiones</h1>
+    <p>Mayo 2026 &nbsp;·&nbsp; Período 01/05 – 31/05/2026</p>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters">
+    <button class="filter-btn active" data-f="todos" onclick="filtrar('todos')">Todos</button>
+    <button class="filter-btn" data-f="katy"  onclick="filtrar('katy')">Katherine Gahona</button>
+    <button class="filter-btn" data-f="pablo" onclick="filtrar('pablo')">Pablo Farizo</button>
+    <button class="filter-btn" data-f="jaime" onclick="filtrar('jaime')">Jaime</button>
+    <button class="filter-btn" data-f="niko"  onclick="filtrar('niko')">Niko</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+
+    <div class="kpi-card katy" data-v="katy">
+      <div class="kpi-name">Katherine Gahona</div>
+      <div class="kpi-periodo">01 – 29 Mayo 2026</div>
+      <div class="kpi-row">
+        <div class="kpi-label">Venta Neta del Mes</div>
+        <div class="kpi-value" data-count="42970183" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-label">Comisión Total</div>
+        <div class="kpi-value" style="font-size:18px" data-count="1838539" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-badge">4.28% comisión</div>
+    </div>
+
+    <div class="kpi-card pablo" data-v="pablo">
+      <div class="kpi-name">Pablo Farizo</div>
+      <div class="kpi-periodo">01 – 28 Mayo 2026</div>
+      <div class="kpi-row">
+        <div class="kpi-label">Venta Neta del Mes</div>
+        <div class="kpi-value" data-count="24526103" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-label">Comisión Total</div>
+        <div class="kpi-value" style="font-size:18px" data-count="1135811" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-badge">4.63% comisión</div>
+    </div>
+
+    <div class="kpi-card jaime" data-v="jaime">
+      <div class="kpi-name">Jaime</div>
+      <div class="kpi-periodo">01 – 31 Mayo 2026</div>
+      <div class="kpi-row">
+        <div class="kpi-label">Venta Neta del Mes</div>
+        <div class="kpi-value" data-count="10683291" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-label">Comisión Total</div>
+        <div class="kpi-value" style="font-size:18px" data-count="274014" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-badge">2.50% sobre consultiva</div>
+    </div>
+
+    <div class="kpi-card niko" data-v="niko">
+      <div class="kpi-name">Niko</div>
+      <div class="kpi-periodo">01 – 31 Mayo 2026</div>
+      <div class="kpi-row">
+        <div class="kpi-label">Venta Neta del Mes</div>
+        <div class="kpi-value" data-count="10683291" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-label">Comisión Total</div>
+        <div class="kpi-value" style="font-size:18px" data-count="274014" data-prefix="$">$0</div>
+      </div>
+      <div class="kpi-badge">2.50% sobre consultiva</div>
+    </div>
+  </div>
+
+  <!-- Gráfico + Tabla -->
+  <div class="bottom-grid">
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Comisión por Vendedor</span>
+        <span class="panel-dot" style="background:#2E75B6"></span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chartComision"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Tabla Comparativa</span>
+        <span class="panel-dot" style="background:#70AD47"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Vendedor</th>
+              <th>Venta Neta</th>
+              <th>Comisión</th>
+              <th>% Com.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-v="katy">
+              <td><span class="td-name"><span class="dot" style="background:#2E75B6"></span>Katherine G.</span></td>
+              <td>$ 42.970.183</td>
+              <td>$ 1.838.540</td>
+              <td><span class="kpi-badge" style="background:rgba(46,117,182,.2);color:#7eb8f7">4.28%</span></td>
+            </tr>
+            <tr data-v="pablo">
+              <td><span class="td-name"><span class="dot" style="background:#70AD47"></span>Pablo Farizo</span></td>
+              <td>$ 24.526.103</td>
+              <td>$ 1.135.811</td>
+              <td><span class="kpi-badge" style="background:rgba(112,173,71,.2);color:#b5e488">4.63%</span></td>
+            </tr>
+            <tr data-v="jaime">
+              <td><span class="td-name"><span class="dot" style="background:#FF4B4B"></span>Jaime</span></td>
+              <td>$ 10.683.291</td>
+              <td>$ 274.015</td>
+              <td><span class="kpi-badge" style="background:rgba(255,75,75,.2);color:#ff9999">2.50%</span></td>
+            </tr>
+            <tr data-v="niko">
+              <td><span class="td-name"><span class="dot" style="background:#9966CC"></span>Niko</span></td>
+              <td>$ 10.683.291</td>
+              <td>$ 274.015</td>
+              <td><span class="kpi-badge" style="background:rgba(153,102,204,.2);color:#cc99ff">2.50%</span></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="tfoot-row">
+              <td>Total General</td>
+              <td>$ 88.862.868</td>
+              <td>$ 3.522.365</td>
+              <td>3.97%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desglose por tipo -->
+  <div class="desglose-grid">
+
+    <div class="breakdown-card" data-v="katy">
+      <div class="breakdown-header" style="background:rgba(46,117,182,0.1);color:#7eb8f7">
+        <span class="dot" style="background:#2E75B6"></span>
+        Katherine Gahona — Desglose Comisión
+      </div>
+      <div class="breakdown-body">
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Comisión por Venta</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#2E75B6" data-pct="62"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#7eb8f7">$ 1.141.290</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Comisión por Arriendo</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#7eb8f7" data-pct="31"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#7eb8f7">$ 570.117</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Pendientes (GM Sanipod + TwentyFour)</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#aacfef" data-pct="7"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#7eb8f7">$ 127.133</div>
+        </div>
+        <div class="breakdown-total" style="color:#7eb8f7">
+          <span>Total</span><span>$ 1.838.540</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="breakdown-card" data-v="pablo">
+      <div class="breakdown-header" style="background:rgba(112,173,71,0.1);color:#b5e488">
+        <span class="dot" style="background:#70AD47"></span>
+        Pablo Farizo — Desglose Comisión
+      </div>
+      <div class="breakdown-body">
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Comisión Post Venta / Biopure</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#70AD47" data-pct="54"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#b5e488">$ 613.410</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Comisión por Venta Directa</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#b5e488" data-pct="29"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#b5e488">$ 324.658</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Comisión por Arriendo</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#d4f0b5" data-pct="17"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#b5e488">$ 197.743</div>
+        </div>
+        <div class="breakdown-total" style="color:#b5e488">
+          <span>Total</span><span>$ 1.135.811</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="breakdown-card" data-v="jaime">
+      <div class="breakdown-header" style="background:rgba(255,75,75,0.1);color:#ff9999">
+        <span class="dot" style="background:#FF4B4B"></span>
+        Jaime — Desglose Comisión
+      </div>
+      <div class="breakdown-body">
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Venta Total del Mes</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#FF4B4B" data-pct="97"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#ff9999">$ 10.683.291</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Venta Consultiva (base cálculo)</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#ff9999" data-pct="100"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#ff9999">$ 10.960.585</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Tasa Comisión</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#ffcccc" data-pct="25"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#ff9999">2.50%</div>
+        </div>
+        <div class="breakdown-total" style="color:#ff9999">
+          <span>Total Comisión</span><span>$ 274.015</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="breakdown-card" data-v="niko">
+      <div class="breakdown-header" style="background:rgba(153,102,204,0.1);color:#cc99ff">
+        <span class="dot" style="background:#9966CC"></span>
+        Niko — Desglose Comisión
+      </div>
+      <div class="breakdown-body">
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Venta Total del Mes</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#9966CC" data-pct="97"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#cc99ff">$ 10.683.291</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Venta Consultiva (base cálculo)</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#cc99ff" data-pct="100"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#cc99ff">$ 10.960.585</div>
+        </div>
+        <div class="breakdown-row">
+          <div>
+            <div class="breakdown-row-label">Tasa Comisión</div>
+            <div class="breakdown-bar"><div class="breakdown-bar-fill" style="background:#e5ccff" data-pct="25"></div></div>
+          </div>
+          <div class="breakdown-row-val" style="color:#cc99ff">2.50%</div>
+        </div>
+        <div class="breakdown-total" style="color:#cc99ff">
+          <span>Total Comisión</span><span>$ 274.015</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    LiveHome SPA &nbsp;·&nbsp; Mayo 2026 &nbsp;·&nbsp; Generado con Claude Code
+  </div>
+
+</div>
+
+<script>
+// ── Login ─────────────────────────────────────────────────
+const CLAVE = "livehome2026";
+function checkPwd() {
+  const val = document.getElementById('pwd-input').value;
+  if (val === CLAVE) {
+    const overlay = document.getElementById('login-overlay');
+    overlay.style.transition = 'opacity 0.4s ease';
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.style.display = 'none'; }, 400);
+    document.getElementById('main-content').style.display = '';
+  } else {
+    const err = document.getElementById('login-error');
+    err.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').style.borderColor = 'rgba(255,75,75,0.6)';
+    setTimeout(() => {
+      err.textContent = '';
+      document.getElementById('pwd-input').style.borderColor = '';
+    }, 2500);
+  }
+}
+
+// ── Contador animado ──────────────────────────────────────
+function animateCounter(el) {
+  const target = parseInt(el.dataset.count);
+  const prefix = el.dataset.prefix || '';
+  const duration = 1600;
+  const start = performance.now();
+  function fmt(n) {
+    return prefix + Math.round(n).toLocaleString('es-CL');
+  }
+  function step(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 4);
+    el.textContent = fmt(target * ease);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(target);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Barras de desglose ────────────────────────────────────
+function animateBars() {
+  document.querySelectorAll('.breakdown-bar-fill').forEach(bar => {
+    setTimeout(() => { bar.style.width = bar.dataset.pct + '%'; }, 300);
+  });
+}
+
+// ── Intersection Observer para activar contadores ────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('[data-count]').forEach(animateCounter);
+      animateBars();
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.kpi-grid, .desglose-grid').forEach(el => observer.observe(el));
+
+// ── Filtros ───────────────────────────────────────────────
+function filtrar(vendedor) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-f="${vendedor}"]`).classList.add('active');
+
+  const targets = document.querySelectorAll('[data-v]');
+  targets.forEach(el => {
+    if (vendedor === 'todos' || el.dataset.v === vendedor) {
+      el.style.display = '';
+      el.style.animation = 'fadeUp 0.4s ease both';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+
+  updateChart(vendedor);
+}
+
+// ── Chart.js ──────────────────────────────────────────────
+const allData = {
+  labels: ['Katherine G.', 'Pablo Farizo', 'Jaime', 'Niko'],
+  ventas:     [42970183, 24526103, 10683291, 10683291],
+  comisiones: [1838540,  1135811,  274015,   274015],
+  colors: ['#2E75B6', '#70AD47', '#FF4B4B', '#9966CC'],
+  colorsAlpha: ['rgba(46,117,182,0.7)', 'rgba(112,173,71,0.7)', 'rgba(255,75,75,0.7)', 'rgba(153,102,204,0.7)'],
+};
+
+const ctx = document.getElementById('chartComision').getContext('2d');
+const myChart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: allData.labels,
+    datasets: [{
+      label: 'Comisión ($)',
+      data: allData.comisiones,
+      backgroundColor: allData.colorsAlpha,
+      borderColor: allData.colors,
+      borderWidth: 2,
+      borderRadius: 10,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    animation: { duration: 1000, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(10,14,26,0.95)',
+        titleColor: '#e8eaf0',
+        bodyColor: '#7a7f9a',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 12,
+        callbacks: {
+          label: ctx => '  $ ' + ctx.raw.toLocaleString('es-CL')
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: '#7a7f9a', font: { family: 'Inter', size: 12, weight: '600' } },
+        border: { display: false }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: {
+          color: '#7a7f9a',
+          font: { family: 'Inter', size: 11 },
+          callback: v => '$ ' + (v/1000000).toFixed(1) + 'M'
+        },
+        border: { display: false }
+      }
+    }
+  }
+});
+
+function updateChart(vendedor) {
+  if (vendedor === 'todos') {
+    myChart.data.labels = allData.labels;
+    myChart.data.datasets[0].data = allData.comisiones;
+    myChart.data.datasets[0].backgroundColor = allData.colorsAlpha;
+    myChart.data.datasets[0].borderColor = allData.colors;
+  } else {
+    const map = {katy:0, pablo:1, jaime:2, niko:3};
+    const i = map[vendedor];
+    myChart.data.labels = [allData.labels[i]];
+    myChart.data.datasets[0].data = [allData.comisiones[i]];
+    myChart.data.datasets[0].backgroundColor = [allData.colorsAlpha[i]];
+    myChart.data.datasets[0].borderColor = [allData.colors[i]];
+  }
+  myChart.update();
+}
+</script>
+</body>
+</html>
