@@ -142,5 +142,6 @@ Mi unidad/REPORTES LIVEHOME SPA/2026/
 
 ## Próximos pasos
 
-- [ ] Actualizar dashboard con datos de Junio 2026
+- [ ] **Automatización mensual** — al inicio de cada mes, cargar los nuevos archivos Excel de Google Drive, actualizar el HTML del dashboard con los datos del mes y hacer `/sync`. Meta: que todo el proceso tome menos de 5 minutos.
+- [ ] Actualizar dashboard con datos de Junio 2026 (primer ciclo de prueba de la automatización)
 - [ ] Evaluar agregar costos e importaciones en una segunda fase
